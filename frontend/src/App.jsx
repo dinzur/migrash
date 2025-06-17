@@ -1,12 +1,19 @@
 import { useState } from "react";
+import Layout from "./components/Layout";
 import CourtMap from "./components/CourtMap";
+import CourtCard from "./components/CourtCard";
 
 export default function App() {
   const [address, setAddress] = useState("");
   const [courtType, setCourtType] = useState("all");
+  const [surface, setSurface] = useState("");
+  const [lighting, setLighting] = useState(false);
   const [count, setCount] = useState(5);
   const [courts, setCourts] = useState([]);
-  const [center, setCenter] = useState([32.079249, 34.774114]); // Default: Dizengoff, Tel Aviv
+  const [center, setCenter] = useState([32.079249, 34.774114]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [warning, setWarning] = useState("");
 
   const geocode = async (addr) => {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`;
@@ -25,7 +32,31 @@ export default function App() {
     return data.display_name || "";
   };
 
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) {
+      setWarning("המכשיר שלך לא תומך בזיהוי מיקום");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setCenter([latitude, longitude]);
+        try {
+          const addressName = await reverseGeocode(latitude, longitude);
+          setAddress(addressName);
+        } catch (e) {
+          setWarning("לא ניתן לתרגם מיקום לכתובת");
+        }
+      },
+      () => setWarning("נכשל בזיהוי מיקום"),
+      { enableHighAccuracy: true }
+    );
+  };
+
   const handleSearch = async () => {
+    setIsLoading(true);
+    setHasSearched(true);
+    setWarning("");
     try {
       const coords = await geocode(address);
       setCenter(coords);
@@ -36,94 +67,165 @@ export default function App() {
         body: JSON.stringify({
           lat: coords[0],
           lon: coords[1],
-          count: count,
-          type: courtType
+          count,
+          type: courtType,
+          surface,
+          lighting
         }),
       });
 
       const result = await res.json();
-      console.log("API result:", result);
 
       if (!Array.isArray(result)) {
-        alert("Server error: " + (result.error || "Unknown issue"));
+        setWarning("שגיאת שרת: " + (result.error || "Invalid data"));
+        setIsLoading(false);
         return;
       }
 
-      const enrichedCourts = await Promise.all(
-        result.map(async (court) => {
-          const fullAddress = await reverseGeocode(court.Latitude, court.Longitude);
-          return { ...court, Address: fullAddress };
+      if (result.length === 0) {
+        setWarning("😞 לא נמצאו מגרשים מתאימים לכתובת והסינון שנבחרו");
+      } else {
+        const flatCourts = result.flatMap((group) => group.Courts);
+        if (flatCourts.length < count) {
+          setWarning(`נמצאו רק ${flatCourts.length} מגרשים מתאימים לסוג שנבחר`);
+        }
+      }
+
+      const enriched = await Promise.all(
+        result.map(async (group) => {
+          const address = await reverseGeocode(group.Latitude, group.Longitude);
+          return {
+            ...group,
+            Courts: group.Courts.map((court) => ({ ...court, Address: address }))
+          };
         })
       );
 
-      setCourts(enrichedCourts);
+      setCourts(enriched);
     } catch (err) {
-      alert("Error: " + err.message);
+      setWarning("שגיאה: " + err.message);
+      setCourts([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleClear = () => {
+    setAddress("");
+    setCourtType("all");
+    setSurface("");
+    setLighting(false);
+    setCount(5);
+    setCourts([]);
+    setCenter([32.079249, 34.774114]);
+    setWarning("");
+    setHasSearched(false);
+  };
+
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold text-center">🏀 MeGrash: Court Finder</h1>
+    <Layout>
+      <div className="bg-white shadow-md rounded-xl p-4 mb-6 max-w-4xl mx-auto space-y-4">
+        <div className="flex flex-wrap gap-4 items-center justify-center">
+          <input
+            type="text"
+            className="border border-gray-300 p-2 rounded w-64"
+            placeholder="הזן כתובת (למשל: דיזנגוף 100 תל אביב)"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
 
-      <div className="flex flex-wrap gap-2 items-center justify-center">
-        <input
-          type="text"
-          className="border p-2 rounded flex-grow min-w-[250px]"
-          placeholder="Enter address (e.g., נהלל 2 תל אביב)"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
+          <button
+            onClick={handleLocateMe}
+            className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
+          >📍 מצא אותי</button>
 
-        <select
-          className="border p-2 rounded"
-          value={courtType}
-          onChange={(e) => setCourtType(e.target.value)}
-        >
-          <option value="all">All Types</option>
-          <option value="basketball">Basketball</option>
-          <option value="football">Football</option>
-          <option value="volleyball">Volleyball</option>
-          <option value="multi-purpose">Multi purposes</option>
-        </select>
+          <select
+            className="border border-gray-300 p-2 rounded w-40"
+            value={courtType}
+            onChange={(e) => setCourtType(e.target.value)}
+          >
+            <option value="all">כל הסוגים</option>
+            <option value="football">כדורגל</option>
+            <option value="basketball">כדורסל</option>
+            <option value="volleyball">כדורעף</option>
+            <option value="multi-purpose">משולב</option>
+          </select>
 
-        <input
-          type="number"
-          className="border p-2 rounded w-24"
-          min={1}
-          max={20}
-          value={count}
-          onChange={(e) => setCount(Number(e.target.value))}
-        />
+          <input
+            type="text"
+            className="border border-gray-300 p-2 rounded w-32"
+            placeholder="סוג משטח"
+            value={surface}
+            onChange={(e) => setSurface(e.target.value)}
+          />
 
-        <button
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          onClick={handleSearch}
-        >
-          Search
-        </button>
+          <label className="flex items-center space-x-1">
+            <input
+              type="checkbox"
+              checked={lighting}
+              onChange={() => setLighting(!lighting)}
+            />
+            <span>תאורה</span>
+          </label>
+
+          <input
+            type="number"
+            min={1}
+            max={20}
+            className="border border-gray-300 p-2 rounded w-24 text-center"
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+          />
+        </div>
+
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={handleSearch}
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors duration-200"
+          >🔍 חפש</button>
+
+          <button
+            onClick={handleClear}
+            className="bg-gray-200 text-gray-800 px-6 py-2 rounded hover:bg-gray-300 transition-colors duration-200"
+          >✖️ נקה</button>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto mb-4">
+        {warning && (
+          <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded shadow flex justify-between items-center max-w-4xl mx-auto">
+            <span className="text-sm">{warning}</span>
+            <button
+              onClick={() => setWarning("")}
+              className="text-yellow-900 hover:text-red-600 font-bold text-lg px-2"
+              aria-label="Dismiss warning"
+            >✖</button>
+          </div>
+        )}
+        {isLoading && (
+          <div className="text-center text-lg text-gray-600 py-4 animate-pulse">
+            ⏳ טוען תוצאות...
+          </div>
+        )}
       </div>
 
       <CourtMap courts={courts} center={center} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-        {courts.map((court, i) => (
-          <div key={i} className="bg-white border border-gray-200 rounded-xl shadow p-4 space-y-2">
-            <h2 className="text-xl font-semibold text-blue-700">{court.CourtType}</h2>
-            <p className="text-gray-700">{court.SurfaceType}</p>
-            <p className="text-sm text-gray-600">
-              🏘 {court.Neighborhood} <br />
-              📍 {court.Street} {court.StreetNumber}
-            </p>
-            {court.Address && (
-              <p className="text-xs text-gray-500 italic">({court.Address})</p>
-            )}
-            <p className="text-sm text-green-600">
-              Distance: {court.Distance.toFixed(2)} km
-            </p>
+      <div className="mt-6 max-w-6xl mx-auto">
+        {courts.length === 0 && hasSearched ? (
+          <div className="text-center text-red-600 py-8 text-lg">
+            😞 לא נמצאו מגרשים מתאימים
           </div>
-        ))}
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {courts.map((group, i) =>
+              group.Courts.map((court, j) => (
+                <CourtCard key={`${i}-${j}`} court={court} />
+              ))
+            )}
+          </div>
+        )}
       </div>
-    </div>
+    </Layout>
   );
 }

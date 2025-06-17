@@ -1,58 +1,85 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+// CourtMap.jsx with clustering, grouped popups, geolocation, filters, and a floating add button
+import React from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap
+} from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-markercluster";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-// Fix default marker icons (required by Leaflet)
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+// Fix for default marker icons not showing
+import iconUrl from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+
+// Fix marker icons globally
+L.Marker.prototype.options.icon = L.icon({
+  iconUrl,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
 });
 
-export default function CourtMap({ courts, center }) {
-  // Group courts by exact [lat, lon]
-  const locationMap = new Map();
+function Recenter({ center }) {
+  const map = useMap();
+  map.setView(center);
+  return null;
+}
 
-  courts.forEach((court) => {
-    const key = `${court.Latitude},${court.Longitude}`;
-    if (!locationMap.has(key)) locationMap.set(key, []);
-    locationMap.get(key).push(court);
-  });
-
+export default function CourtMap({ courts, center, onFindMe }) {
   return (
-    <MapContainer
-      center={center}
-      zoom={15}
-      style={{ height: "400px", width: "100%" }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <div className="relative h-[500px] rounded-xl overflow-hidden shadow">
+      <MapContainer
+        center={center}
+        zoom={14}
+        scrollWheelZoom={true}
+        className="w-full h-full"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-      {[...locationMap.entries()].map(([key, courtsAtLoc], i) => {
-        const [lat, lon] = key.split(",").map(Number);
-        return (
-          <Marker key={i} position={[lat, lon]}>
-            <Popup>
-              <div>
-                <strong>{courtsAtLoc.length} court{courtsAtLoc.length > 1 ? "s" : ""} at this location:</strong>
-                <ul className="mt-2 text-sm">
-                  {courtsAtLoc.map((court, idx) => (
-                    <li key={idx} className="mb-1">
-                      🏷 {court.CourtType} | {court.SurfaceType}
-                      <br />
-                      📍 {court.Street} {court.StreetNumber}, {court.Neighborhood}
-                    </li>
+        <Recenter center={center} />
+
+        <MarkerClusterGroup chunkedLoading disableClusteringAtZoom={10}>
+          {courts.map((group, i) => (
+            <Marker key={i} position={[group.Latitude, group.Longitude]}>
+              <Popup>
+                <div className="text-right text-sm space-y-2">
+                  {group.Courts.map((court, j) => (
+                    <div key={j} className="border-b pb-2">
+                      <div className="font-semibold">{court.CourtType}</div>
+                      <div>{court.Street} {court.StreetNumber}, {court.City}</div>
+                      <div>סוג משטח: {court.SurfaceType}</div>
+                      <div>מרחק: {court.Distance?.toFixed(2)} ק"מ</div>
+                    </div>
                   ))}
-                </ul>
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
-    </MapContainer>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MarkerClusterGroup>
+      </MapContainer>
+
+      {/* Floating Add Button */}
+      <button
+        className="absolute bottom-4 left-4 bg-green-500 text-white px-4 py-2 rounded-full shadow-lg hover:bg-green-600 transition-all"
+        onClick={() => alert("Feature coming soon: Add new court")}
+      >
+        ➕ הוסף מגרש
+      </button>
+
+      {/* Floating Location Button */}
+      <button
+        className="absolute bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-600 transition-all"
+        onClick={onFindMe}
+      >
+        📍 מצא אותי
+      </button>
+    </div>
   );
 }
