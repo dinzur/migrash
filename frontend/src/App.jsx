@@ -1,5 +1,6 @@
-import { useState } from "react";
-import Layout from "./components/Layout";
+import { useState, useEffect } from "react";
+import Header from "./components/Header";
+import SearchHeader from "./components/SearchHeader";
 import CourtMap from "./components/CourtMap";
 import CourtCard from "./components/CourtCard";
 
@@ -14,6 +15,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [warning, setWarning] = useState("");
+  const [triggerSearchOnTypeChange, setTriggerSearchOnTypeChange] = useState(false);
 
   const geocode = async (addr) => {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`;
@@ -70,7 +72,7 @@ export default function App() {
           count,
           type: courtType,
           surface,
-          lighting
+          lighting,
         }),
       });
 
@@ -84,11 +86,6 @@ export default function App() {
 
       if (result.length === 0) {
         setWarning("😞 לא נמצאו מגרשים מתאימים לכתובת והסינון שנבחרו");
-      } else {
-        const flatCourts = result.flatMap((group) => group.Courts);
-        if (flatCourts.length < count) {
-          setWarning(`נמצאו רק ${flatCourts.length} מגרשים מתאימים לסוג שנבחר`);
-        }
       }
 
       const enriched = await Promise.all(
@@ -96,7 +93,7 @@ export default function App() {
           const address = await reverseGeocode(group.Latitude, group.Longitude);
           return {
             ...group,
-            Courts: group.Courts.map((court) => ({ ...court, Address: address }))
+            Courts: group.Courts.map((court) => ({ ...court, Address: address })),
           };
         })
       );
@@ -122,94 +119,54 @@ export default function App() {
     setHasSearched(false);
   };
 
+  // 🧠 Trigger search on courtType change
+  useEffect(() => {
+    if (triggerSearchOnTypeChange) {
+      handleSearch();
+      setTriggerSearchOnTypeChange(false);
+    }
+  }, [courtType]);
+
   return (
-    <Layout>
-      <div className="bg-white shadow-md rounded-xl p-4 mb-6 max-w-4xl mx-auto space-y-4">
-        <div className="flex flex-wrap gap-4 items-center justify-center">
-          <input
-            type="text"
-            className="border border-gray-300 p-2 rounded w-64"
-            placeholder="הזן כתובת (למשל: דיזנגוף 100 תל אביב)"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
+    <div className="bg-gray-50 min-h-screen font-sans">
+      <Header />
+      <SearchHeader
+        address={address}
+        setAddress={setAddress}
+        courtType={courtType}
+        setCourtType={(type) => {
+          setCourtType(type);
+          setTriggerSearchOnTypeChange(true);
+        }}
+        onSearch={handleSearch}
+        onClear={handleClear}
+        onFindMe={handleLocateMe}
+        count={count}
+        setCount={setCount}
+        lighting={lighting}
+        setLighting={setLighting}
+        surface={surface}
+        setSurface={setSurface}
+      />
 
+      {warning && (
+        <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded shadow flex justify-between items-center max-w-4xl mx-auto">
+          <span className="text-sm">{warning}</span>
           <button
-            onClick={handleLocateMe}
-            className="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
-          >📍 מצא אותי</button>
-
-          <select
-            className="border border-gray-300 p-2 rounded w-40"
-            value={courtType}
-            onChange={(e) => setCourtType(e.target.value)}
+            onClick={() => setWarning("")}
+            className="text-yellow-900 hover:text-red-600 font-bold text-lg px-2"
           >
-            <option value="all">כל הסוגים</option>
-            <option value="football">כדורגל</option>
-            <option value="basketball">כדורסל</option>
-            <option value="volleyball">כדורעף</option>
-            <option value="multi-purpose">משולב</option>
-          </select>
-
-          <input
-            type="text"
-            className="border border-gray-300 p-2 rounded w-32"
-            placeholder="סוג משטח"
-            value={surface}
-            onChange={(e) => setSurface(e.target.value)}
-          />
-
-          <label className="flex items-center space-x-1">
-            <input
-              type="checkbox"
-              checked={lighting}
-              onChange={() => setLighting(!lighting)}
-            />
-            <span>תאורה</span>
-          </label>
-
-          <input
-            type="number"
-            min={1}
-            max={20}
-            className="border border-gray-300 p-2 rounded w-24 text-center"
-            value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
-          />
+            ✖
+          </button>
         </div>
-
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={handleSearch}
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors duration-200"
-          >🔍 חפש</button>
-
-          <button
-            onClick={handleClear}
-            className="bg-gray-200 text-gray-800 px-6 py-2 rounded hover:bg-gray-300 transition-colors duration-200"
-          >✖️ נקה</button>
+      )}
+      {isLoading && (
+        <div className="text-center text-lg text-gray-600 py-4 animate-pulse">
+          ⏳ טוען תוצאות...
         </div>
-      </div>
+      )}
 
-      <div className="max-w-4xl mx-auto mb-4">
-        {warning && (
-          <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded shadow flex justify-between items-center max-w-4xl mx-auto">
-            <span className="text-sm">{warning}</span>
-            <button
-              onClick={() => setWarning("")}
-              className="text-yellow-900 hover:text-red-600 font-bold text-lg px-2"
-              aria-label="Dismiss warning"
-            >✖</button>
-          </div>
-        )}
-        {isLoading && (
-          <div className="text-center text-lg text-gray-600 py-4 animate-pulse">
-            ⏳ טוען תוצאות...
-          </div>
-        )}
-      </div>
-
-      <CourtMap courts={courts} center={center} />
+      <CourtMap courts={courts} center={center} onFindMe={handleLocateMe} />
 
       <div className="mt-6 max-w-6xl mx-auto">
         {courts.length === 0 && hasSearched ? (
@@ -226,6 +183,6 @@ export default function App() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }
