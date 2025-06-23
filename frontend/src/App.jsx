@@ -15,6 +15,8 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [warning, setWarning] = useState("");
+  const [showMap, setShowMap] = useState(false);
+  const [favorites, setFavorites] = useState([]);
   const [triggerSearchOnTypeChange, setTriggerSearchOnTypeChange] = useState(false);
 
   const geocode = async (addr) => {
@@ -85,7 +87,7 @@ export default function App() {
       }
 
       if (result.length === 0) {
-        setWarning("😞 לא נמצאו מגרשים מתאימים לכתובת והסינון שנבחרו");
+        setWarning("לא נמצאו מגרשים מתאימים לכתובת והסינון שנבחרו 😞");
       }
 
       const enriched = await Promise.all(
@@ -126,64 +128,81 @@ export default function App() {
     }
   }, [courtType]);
 
+  const toggleFavorite = (court) => {
+    const key = `${court.Latitude}-${court.Longitude}-${court.Description}`;
+    setFavorites((prev) =>
+      prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]
+    );
+  };
+
   return (
-    <>
-      <div className="bg-gray-50 min-h-screen font-sans">
-        <Header />
-        <SearchHeader
-          address={address}
-          setAddress={setAddress}
-          courtType={courtType}
-          setCourtType={(type) => {
-            setCourtType(type);
-            setTriggerSearchOnTypeChange(true);
-          }}
-          onSearch={handleSearch}
-          onClear={handleClear}
-          onFindMe={handleLocateMe}
-          count={count}
-          setCount={setCount}
-          lighting={lighting}
-          setLighting={setLighting}
-          surface={surface}
-          setSurface={setSurface}
-        />
+    <div className="bg-gray-50 min-h-screen font-sans">
+      <Header />
+      <SearchHeader
+        address={address}
+        setAddress={setAddress}
+        courtType={courtType}
+        setCourtType={(type) => {
+          setCourtType(type);
+          setTriggerSearchOnTypeChange(true);
+        }}
+        onSearch={handleSearch}
+        onClear={handleClear}
+        onFindMe={handleLocateMe}
+        count={count}
+        setCount={setCount}
+        lighting={lighting}
+        setLighting={setLighting}
+        surface={surface}
+        setSurface={setSurface}
+      />
 
-        {warning && (
-          <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded shadow flex justify-between items-center max-w-4xl mx-auto">
-            <span className="text-sm">{warning}</span>
-            <button
-              onClick={() => setWarning("")}
-              className="text-yellow-900 hover:text-red-600 font-bold text-lg px-2"
-            >
-              ✖
-            </button>
-          </div>
-        )}
-        {isLoading && (
-          <div className="text-center text-lg text-gray-600 py-4 animate-pulse">
-            ⏳ טוען תוצאות...
-          </div>
-        )}
-
-        <CourtMap courts={courts} center={center} onFindMe={handleLocateMe} />
-
-        <div className="mt-6 max-w-6xl mx-auto">
-          {courts.length === 0 && hasSearched ? (
-            <div className="text-center text-red-600 py-8 text-lg">
-              😞 לא נמצאו מגרשים מתאימים
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courts.map((group, i) =>
-                group.Courts.map((court, j) => (
-                  <CourtCard key={`${i}-${j}`} court={court} />
-                ))
-              )}
-            </div>
-          )}
+      {warning && (
+        <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded shadow flex justify-between items-center max-w-4xl mx-auto">
+          <span className="text-sm">{warning}</span>
+          <button
+            onClick={() => setWarning("")}
+            className="text-yellow-900 hover:text-red-600 font-bold text-lg px-2"
+          >
+            ✖
+          </button>
         </div>
+      )}
+      {isLoading && (
+        <div className="text-center text-lg text-gray-600 py-4 animate-pulse">
+          טוען תוצאות... ⏳
+        </div>
+      )}
+
+      <div className="text-center mt-2">
+        <button
+          onClick={() => setShowMap(!showMap)}
+          className="text-sm bg-blue-200 text-blue-900 px-4 py-1 rounded-full hover:bg-blue-300 transition"
+        >
+          {showMap ? "הסתר מפה 🗺️" : "הצג מפה 🗺️"}
+        </button>
       </div>
-    </>
+
+      {showMap && (
+        <CourtMap courts={courts} center={center} onFindMe={handleLocateMe} />
+      )}
+
+      <div className="mt-6 max-w-6xl mx-auto">
+        {hasSearched && !isLoading && courts.length === 0 ? (
+          <div className="text-center text-red-600 py-8 text-lg">
+            לא נמצאו מגרשים מתאימים 😞
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {courts.map((group, i) =>
+              group.Courts.map((court, j) => (
+                <CourtCard key={`${i}-${j}`} court={court} />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+    </div>
   );
 }

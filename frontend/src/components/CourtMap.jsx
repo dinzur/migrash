@@ -44,20 +44,25 @@ export default function CourtMap({ courts, center, onFindMe }) {
 
         <MarkerClusterGroup chunkedLoading disableClusteringAtZoom={10}>
           {courts.map((group, i) => (
-            <Marker key={i} position={[group.Latitude, group.Longitude]}>
-              <Popup>
-                <div className="text-right text-sm space-y-2">
-                  {group.Courts.map((court, j) => (
-                    <div key={j} className="border-b pb-2 mb-2">
-                      <div className="font-semibold">{court.CourtType}</div>
-                      <div>{court.Street} {court.StreetNumber}, {court.City}</div>
-                      <div>סוג משטח: {court.SurfaceType}</div>
-                      <div>מרחק: {court.Distance?.toFixed(2)} ק״מ</div>
-                    </div>
-                  ))}
-                </div>
-              </Popup>
-            </Marker>
+            group?.Latitude && group?.Longitude && group?.Courts?.length > 0 ? (
+              <Marker key={i} position={[group.Latitude, group.Longitude]}>
+                <Popup>
+                  <div className="text-right text-sm space-y-2">
+                    {group.Courts.map((court, j) => (
+                      <div key={j} className="border-b pb-2 mb-2">
+                        <div className="font-semibold">
+                          {court.CourtType === "רב-תכליתיים" ? "משולב" : court.CourtType}
+                        </div>
+                        <div>{court.Street} {court.StreetNumber}, {court.City}</div>
+                        <div>סוג משטח: {court.SurfaceType}</div>
+                        <div>מרחק: {court.Distance?.toFixed(2)} ק״מ</div>
+                        <div>תאורה: {court.Lighting ? "✅" : "❌"}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Popup>
+              </Marker>
+            ) : null
           ))}
         </MarkerClusterGroup>
       </MapContainer>

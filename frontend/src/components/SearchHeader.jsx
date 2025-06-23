@@ -22,7 +22,7 @@ export default function SearchHeader({
     { label: "⚽ כדורגל", value: "football" },
     { label: "🏀 כדורסל", value: "basketball" },
     { label: "🏐 כדורעף", value: "volleyball" },
-    { label: "🏟️ רב-תכליתיים", value: "multi-purpose" },
+    { label: "🏟️ משולב", value: "multi-purpose" },
     { label: "🌀 הכל", value: "all" },
   ];
 
@@ -34,8 +34,8 @@ export default function SearchHeader({
         מצא את המגרש הציבורי הקרוב אליך!
       </h2>
 
-      {/* 🔍 Search Bar */}
-      <div className="flex flex-col md:flex-row gap-3 items-center justify-center mb-4">
+      {/* 🔍 Search Row */}
+      <div className="flex flex-wrap gap-3 items-center justify-center mb-4">
         <div className="flex items-center bg-gray-100 px-4 py-2 rounded-full w-full md:w-2/3 max-w-md">
           <FaSearchLocation className="text-gray-500 ml-2" />
           <input
@@ -55,19 +55,16 @@ export default function SearchHeader({
           📍 מצא אותי
         </button>
 
-        <input
-          type="number"
-          min={1}
-          max={20}
-          value={count}
-          onChange={(e) => setCount(Number(e.target.value))}
-          className="border rounded-full px-3 py-2 w-20 text-center"
-          placeholder="כמות"
-        />
+        <button
+          onClick={onSearch}
+          className="bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 transition"
+        >
+          🔍 חפש
+        </button>
       </div>
 
-      {/* 🏀 Filter Buttons */}
-      <div className="flex justify-center flex-wrap gap-2 mb-4">
+      {/* 🏀 Court Type Filter Buttons */}
+      <div className="flex justify-center flex-wrap gap-2 mb-2">
         {typeOptions.map((option) => (
           <button
             key={option.value}
@@ -83,27 +80,35 @@ export default function SearchHeader({
         ))}
       </div>
 
-      {/* 🧰 Action Buttons */}
-      <div className="flex justify-center gap-3 mb-2">
-        <button
-          onClick={onSearch}
-          className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700"
-        >
-          🔍 חפש
-        </button>
+      {/* 🔢 Count Field */}
+      <div className="flex justify-center mb-4">
+        <label className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full">
+          <span className="text-sm text-gray-800 font-medium">🔢 מספר מגרשים רצויים:</span>
+          <input
+            type="number"
+            min={1}
+            max={20}
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+            className="border border-gray-300 rounded px-2 py-1 w-16 text-center"
+          />
+        </label>
+      </div>
 
+      {/* 🧰 Reset & Filter Toggles */}
+      <div className="flex justify-center gap-4 mb-4 flex-wrap">
         <button
           onClick={onClear}
-          className="bg-gray-300 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-400"
+          className="bg-gray-300 text-gray-800 px-6 py-2 rounded-full hover:bg-gray-400 transition"
         >
           ❌ איפוס
         </button>
 
         <button
           onClick={() => setShowFilters((prev) => !prev)}
-          className="bg-yellow-200 text-yellow-900 px-6 py-2 rounded-full hover:bg-yellow-300"
+          className="bg-yellow-200 text-yellow-900 px-6 py-2 rounded-full hover:bg-yellow-300 transition"
         >
-          ⚙️ סינון מתקדם
+          🛠️ תכונות מגרש
         </button>
       </div>
 
@@ -123,7 +128,7 @@ export default function SearchHeader({
         </div>
       )}
 
-      {/* 🎛️ Advanced Filters (Collapsible) */}
+      {/* 🎛️ Advanced Filters Section */}
       <div
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
           showFilters ? "max-h-40 mt-2" : "max-h-0"
