@@ -119,7 +119,6 @@ export default function App() {
     setHasSearched(false);
   };
 
-  // 🧠 Trigger search on courtType change
   useEffect(() => {
     if (triggerSearchOnTypeChange) {
       handleSearch();
@@ -128,61 +127,63 @@ export default function App() {
   }, [courtType]);
 
   return (
-    <div className="bg-gray-50 min-h-screen font-sans">
-      <Header />
-      <SearchHeader
-        address={address}
-        setAddress={setAddress}
-        courtType={courtType}
-        setCourtType={(type) => {
-          setCourtType(type);
-          setTriggerSearchOnTypeChange(true);
-        }}
-        onSearch={handleSearch}
-        onClear={handleClear}
-        onFindMe={handleLocateMe}
-        count={count}
-        setCount={setCount}
-        lighting={lighting}
-        setLighting={setLighting}
-        surface={surface}
-        setSurface={setSurface}
-      />
+    <>
+      <div className="bg-gray-50 min-h-screen font-sans">
+        <Header />
+        <SearchHeader
+          address={address}
+          setAddress={setAddress}
+          courtType={courtType}
+          setCourtType={(type) => {
+            setCourtType(type);
+            setTriggerSearchOnTypeChange(true);
+          }}
+          onSearch={handleSearch}
+          onClear={handleClear}
+          onFindMe={handleLocateMe}
+          count={count}
+          setCount={setCount}
+          lighting={lighting}
+          setLighting={setLighting}
+          surface={surface}
+          setSurface={setSurface}
+        />
 
-      {warning && (
-        <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded shadow flex justify-between items-center max-w-4xl mx-auto">
-          <span className="text-sm">{warning}</span>
-          <button
-            onClick={() => setWarning("")}
-            className="text-yellow-900 hover:text-red-600 font-bold text-lg px-2"
-          >
-            ✖
-          </button>
-        </div>
-      )}
-      {isLoading && (
-        <div className="text-center text-lg text-gray-600 py-4 animate-pulse">
-          ⏳ טוען תוצאות...
-        </div>
-      )}
-
-      <CourtMap courts={courts} center={center} onFindMe={handleLocateMe} />
-
-      <div className="mt-6 max-w-6xl mx-auto">
-        {courts.length === 0 && hasSearched ? (
-          <div className="text-center text-red-600 py-8 text-lg">
-            😞 לא נמצאו מגרשים מתאימים
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courts.map((group, i) =>
-              group.Courts.map((court, j) => (
-                <CourtCard key={`${i}-${j}`} court={court} />
-              ))
-            )}
+        {warning && (
+          <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded shadow flex justify-between items-center max-w-4xl mx-auto">
+            <span className="text-sm">{warning}</span>
+            <button
+              onClick={() => setWarning("")}
+              className="text-yellow-900 hover:text-red-600 font-bold text-lg px-2"
+            >
+              ✖
+            </button>
           </div>
         )}
+        {isLoading && (
+          <div className="text-center text-lg text-gray-600 py-4 animate-pulse">
+            ⏳ טוען תוצאות...
+          </div>
+        )}
+
+        <CourtMap courts={courts} center={center} onFindMe={handleLocateMe} />
+
+        <div className="mt-6 max-w-6xl mx-auto">
+          {courts.length === 0 && hasSearched ? (
+            <div className="text-center text-red-600 py-8 text-lg">
+              😞 לא נמצאו מגרשים מתאימים
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courts.map((group, i) =>
+                group.Courts.map((court, j) => (
+                  <CourtCard key={`${i}-${j}`} court={court} />
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
