@@ -10,6 +10,7 @@ export default function App() {
   const [surface, setSurface] = useState("");
   const [lighting, setLighting] = useState(false);
   const [count, setCount] = useState(5);
+  const [excludeMixed, setExcludeMixed] = useState(false);
   const [courts, setCourts] = useState([]);
   const [center, setCenter] = useState([32.079249, 34.774114]);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,6 +19,7 @@ export default function App() {
   const [showMap, setShowMap] = useState(false);
   const [favorites, setFavorites] = useState([]);
   const [triggerSearchOnTypeChange, setTriggerSearchOnTypeChange] = useState(false);
+  const [locationFetched, setLocationFetched] = useState(false); // ✅ NEW
 
   const geocode = async (addr) => {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`;
@@ -45,9 +47,11 @@ export default function App() {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         setCenter([latitude, longitude]);
+        setLocationFetched(true); // ✅ Mark as fetched
         try {
           const addressName = await reverseGeocode(latitude, longitude);
           setAddress(addressName);
+          await handleSearch(latitude, longitude); // ✅ Perform search after locating
         } catch (e) {
           setWarning("לא ניתן לתרגם מיקום לכתובת");
         }
@@ -57,13 +61,18 @@ export default function App() {
     );
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (latOverride, lonOverride) => {
     setIsLoading(true);
     setHasSearched(true);
     setWarning("");
     try {
-      const coords = await geocode(address);
-      setCenter(coords);
+      let coords;
+      if (latOverride && lonOverride) {
+        coords = [latOverride, lonOverride];
+      } else {
+        coords = await geocode(address);
+        setCenter(coords);
+      }
 
       const res = await fetch("http://127.0.0.1:5000/api/closest", {
         method: "POST",
@@ -75,6 +84,7 @@ export default function App() {
           type: courtType,
           surface,
           lighting,
+          exclude_mixed_locations: excludeMixed,
         }),
       });
 
@@ -114,12 +124,19 @@ export default function App() {
     setCourtType("all");
     setSurface("");
     setLighting(false);
+    setExcludeMixed(false);
     setCount(5);
     setCourts([]);
     setCenter([32.079249, 34.774114]);
     setWarning("");
     setHasSearched(false);
   };
+
+  useEffect(() => {
+    if (!locationFetched) {
+      handleLocateMe();
+    }
+  }, [locationFetched]);
 
   useEffect(() => {
     if (triggerSearchOnTypeChange) {
@@ -148,13 +165,14 @@ export default function App() {
         }}
         onSearch={handleSearch}
         onClear={handleClear}
-        onFindMe={handleLocateMe}
         count={count}
         setCount={setCount}
         lighting={lighting}
         setLighting={setLighting}
         surface={surface}
         setSurface={setSurface}
+        excludeMixed={excludeMixed}
+        setExcludeMixed={setExcludeMixed}
       />
 
       {warning && (
@@ -202,7 +220,6 @@ export default function App() {
           </div>
         )}
       </div>
-
     </div>
   );
 }

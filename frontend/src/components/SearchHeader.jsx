@@ -8,13 +8,14 @@ export default function SearchHeader({
   setCourtType,
   onSearch,
   onClear,
-  onFindMe,
   count,
   setCount,
   lighting,
   setLighting,
   surface,
   setSurface,
+  excludeMixed,
+  setExcludeMixed,
 }) {
   const [showFilters, setShowFilters] = useState(false);
 
@@ -22,11 +23,10 @@ export default function SearchHeader({
     { label: "⚽ כדורגל", value: "football" },
     { label: "🏀 כדורסל", value: "basketball" },
     { label: "🏐 כדורעף", value: "volleyball" },
-    { label: "🏟️ משולב", value: "multi-purpose" },
     { label: "🌀 הכל", value: "all" },
   ];
 
-  const hasActiveFilters = lighting || surface;
+  const hasActiveFilters = lighting || surface || excludeMixed;
 
   return (
     <div className="bg-white shadow-md rounded-2xl p-6 max-w-4xl mx-auto mb-6 text-right">
@@ -34,7 +34,6 @@ export default function SearchHeader({
         מצא את המגרש הציבורי הקרוב אליך!
       </h2>
 
-      {/* 🔍 Search Row */}
       <div className="flex flex-wrap gap-3 items-center justify-center mb-4">
         <div className="flex items-center bg-gray-100 px-4 py-2 rounded-full w-full md:w-2/3 max-w-md">
           <FaSearchLocation className="text-gray-500 ml-2" />
@@ -49,13 +48,6 @@ export default function SearchHeader({
         </div>
 
         <button
-          onClick={onFindMe}
-          className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition"
-        >
-          📍 מצא אותי
-        </button>
-
-        <button
           onClick={onSearch}
           className="bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 transition"
         >
@@ -63,7 +55,6 @@ export default function SearchHeader({
         </button>
       </div>
 
-      {/* 🏀 Court Type Filter Buttons */}
       <div className="flex justify-center flex-wrap gap-2 mb-2">
         {typeOptions.map((option) => (
           <button
@@ -80,7 +71,6 @@ export default function SearchHeader({
         ))}
       </div>
 
-      {/* 🔢 Count Field */}
       <div className="flex justify-center mb-4">
         <label className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full">
           <span className="text-sm text-gray-800 font-medium">🔢 מספר מגרשים רצויים:</span>
@@ -95,7 +85,6 @@ export default function SearchHeader({
         </label>
       </div>
 
-      {/* 🧰 Reset & Filter Toggles */}
       <div className="flex justify-center gap-4 mb-4 flex-wrap">
         <button
           onClick={onClear}
@@ -112,7 +101,6 @@ export default function SearchHeader({
         </button>
       </div>
 
-      {/* 🏷️ Active Filter Badges */}
       {!showFilters && hasActiveFilters && (
         <div className="flex justify-center gap-4 mb-2 flex-wrap">
           {lighting && (
@@ -125,10 +113,14 @@ export default function SearchHeader({
               🧱 משטח: {surface}
             </span>
           )}
+          {excludeMixed && (
+            <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
+              🚫 ללא מגרשים משולבים
+            </span>
+          )}
         </div>
       )}
 
-      {/* 🎛️ Advanced Filters Section */}
       <div
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
           showFilters ? "max-h-40 mt-2" : "max-h-0"
@@ -143,6 +135,15 @@ export default function SearchHeader({
                 onChange={() => setLighting(!lighting)}
               />
               <span>💡 רק עם תאורה</span>
+            </label>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={excludeMixed}
+                onChange={() => setExcludeMixed(!excludeMixed)}
+              />
+              <span>🚫 ללא מגרשים משולבים</span>
             </label>
 
             <div className="flex items-center gap-2">

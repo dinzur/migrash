@@ -13,12 +13,11 @@ export default function SearchBar({
   setCount,
   onSearch,
   onClear,
-  onFindMe,
 }) {
   return (
     <div className="bg-white shadow-md rounded-xl p-4 mb-6 max-w-6xl mx-auto space-y-4">
       <h2 className="text-xl font-bold text-center text-gray-800">
-        מצא את המגרש הציבורי הקרוב אליך!
+        חפש מגרש ציבורי לפי כתובת או סינון
       </h2>
 
       <div className="flex flex-wrap gap-4 justify-center items-center">
@@ -32,13 +31,6 @@ export default function SearchBar({
             onChange={(e) => setAddress(e.target.value)}
           />
         </div>
-
-        <button
-          onClick={onFindMe}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-        >
-          📍 מצא אותי
-        </button>
 
         <select
           className="border border-gray-300 p-2 rounded w-40"

@@ -23,6 +23,7 @@ export default function CourtCard({ court }) {
   const [expanded, setExpanded] = useState(false);
   const [showNavPopup, setShowNavPopup] = useState(false);
   const [favorite, setFavorite] = useState(false);
+  const [rating, setRating] = useState(4);
   const [showImageModal, setShowImageModal] = useState(false);
 
   const [images, setImages] = useState(
@@ -63,6 +64,10 @@ export default function CourtCard({ court }) {
     return "bg-red-100 text-red-700";
   };
 
+  const handleSetRating = (newRating) => {
+    setRating(newRating);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -74,7 +79,7 @@ export default function CourtCard({ court }) {
       <div className="p-4 flex flex-col justify-between flex-grow">
         <div className="flex items-center gap-2 mb-1">
           <span className={`text-lg px-2 py-1 rounded-full ${badge.bg} ${badge.textColor}`}>{badge.icon}</span>
-          <h3 className="text-lg font-bold">{CourtType || "מגרש"}</h3>
+          <h3 className="text-lg font-bold">{Description || "מגרש ציבורי"}</h3>
           <span className={`text-lg ${badge.textColor}`}>{badge.icon}</span>
           <motion.button
             onClick={() => setFavorite((prev) => !prev)}
@@ -86,25 +91,48 @@ export default function CourtCard({ court }) {
           </motion.button>
         </div>
 
-        <div className="flex flex-wrap gap-2 mt-2">
-          {featureTags.map((tag, idx) => (
-            <span key={idx} className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-              {tag}
-            </span>
+        {/* ⭐ Interactive Rating */}
+        <div className="text-sm text-yellow-500 mb-1 flex gap-1 items-center">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <motion.span
+              key={i}
+              onClick={() => handleSetRating(i)}
+              whileTap={{ scale: 1.4 }}
+              className="cursor-pointer"
+              title={`דרג ${i}`}
+            >
+              {i <= rating ? "⭐" : "✩"}
+            </motion.span>
           ))}
+          <span className="text-gray-500 text-xs">(12 דירוגים)</span>
         </div>
 
-        <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
+        {/* ✅ Features summary */}
+        <div className="text-sm text-gray-700 flex flex-wrap gap-4 mb-1">
+          <div>💡 תאורה: {Lighting ? "✅" : "❌"}</div>
+          <div>⚽ שערים: {CourtType?.includes("כדורגל") ? "✅" : "❌"}</div>
+          <div>🏀 סלים: {CourtType?.includes("כדורסל") ? "✅" : "❌"}</div>
+          <div className="text-green-700 font-semibold">🟢 זמינות: פנוי עכשיו</div>
+        </div>
+
+        {/* Distance + buttons */}
+        <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
           {Distance !== undefined && (
             <span className={`text-sm font-medium flex items-center gap-1 px-3 py-1 rounded-full ${getDistanceStyle(Distance)}`}>
               📍 {Distance.toFixed(1)} ק״מ
             </span>
           )}
           <div className="flex gap-2">
-            <button className="border border-gray-400 text-sm px-4 py-1 rounded-full hover:bg-gray-100" onClick={() => setExpanded(!expanded)}>
+            <button
+              className="border border-gray-400 text-sm px-4 py-1 rounded-full hover:bg-gray-100"
+              onClick={() => setExpanded(!expanded)}
+            >
               ℹ️ פרטים
             </button>
-            <button className="border border-indigo-400 text-sm px-4 py-1 rounded-full hover:bg-indigo-50" onClick={() => setShowNavPopup(true)}>
+            <button
+              className="border border-indigo-400 text-sm px-4 py-1 rounded-full hover:bg-indigo-50"
+              onClick={() => setShowNavPopup(true)}
+            >
               🧭 ניווט
             </button>
           </div>

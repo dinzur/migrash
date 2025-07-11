@@ -26,26 +26,16 @@ def get_closest_courts():
         selected_type = (data.get("type") or "all").strip().lower()
         surface = (data.get("surface") or "").strip().lower()
         lighting = data.get("lighting", False)
+        exclude_mixed = data.get("exclude_mixed_locations", False)
 
         if lat is None or lon is None:
             return jsonify({"error": "Missing coordinates"}), 400
 
-        # Court type mapping from UI input (English) to Hebrew keyword
-        TYPE_MAP = {
-            "football": "כדורגל",
-            "basketball": "כדורסל",
-            "volleyball": "כדורעף",
-            "multi": "משולב",
-            "multi-purpose": "משולב"
-        }
-
-        mapped_type = TYPE_MAP.get(selected_type, None)
-
         filtered_df = court_data.copy()
 
-        if mapped_type:
+        if selected_type != "all":
             filtered_df = filtered_df[
-                filtered_df["CourtType"].astype(str).str.contains(mapped_type, na=False)
+                filtered_df["sports_supported"].apply(lambda lst: selected_type in lst)
             ]
 
         if surface:
@@ -59,26 +49,34 @@ def get_closest_courts():
         if filtered_df.empty:
             return jsonify([])
 
-        # Find nearest courts (ordered)
-        nearest = find_nearest(lat, lon, filtered_df, n=count)
+        # Calculate distances first (don't limit yet)
+        all_nearby = find_nearest(lat, lon, filtered_df, n=len(filtered_df))
 
-        # Preserve distance order and group by location manually
         result = []
         seen = set()
 
-        for _, row in nearest.iterrows():
+        for _, row in all_nearby.iterrows():
             key = (row["Latitude"], row["Longitude"])
-
             if key in seen:
                 continue
             seen.add(key)
 
-            group = nearest[(nearest["Latitude"] == key[0]) & (nearest["Longitude"] == key[1])]
+            group = all_nearby[
+                (all_nearby["Latitude"] == key[0]) & (all_nearby["Longitude"] == key[1])
+            ]
+
+            # ✅ Exclude mixed-location groups if filter is on
+            if exclude_mixed:
+                all_sports = group["sports_supported"].dropna().tolist()
+                flattened = set(s for sublist in all_sports for s in sublist)
+                if len(flattened) > 1:
+                    continue
 
             courts = []
+
             for _, r in group.iterrows():
-                courts.append({
-                    "CourtType": safe(r["CourtType"]),
+                supported = r.get("sports_supported", [])
+                base_data = {
                     "SurfaceType": safe(r["SurfaceType"]),
                     "City": safe(r["City"]),
                     "Street": safe(r["Street"]),
@@ -91,7 +89,20 @@ def get_closest_courts():
                     "Description": safe(r.get("Description")),
                     "Latitude": safe(r["Latitude"]),
                     "Longitude": safe(r["Longitude"]),
-                })
+                }
+
+                for sport in supported:
+                    court_type = {
+                        "football": "מגרש כדורגל",
+                        "basketball": "מגרש כדורסל",
+                        "volleyball": "מגרש כדורעף"
+                    }.get(sport, "מגרש")
+
+                    courts.append({
+                        "CourtType": court_type,
+                        "sports_supported": [sport],
+                        **base_data
+                    })
 
             result.append({
                 "Latitude": key[0],
@@ -99,7 +110,34 @@ def get_closest_courts():
                 "Courts": courts
             })
 
-        return jsonify(result)
+            # ✅ Stop once enough courts collected
+            if sum(len(group["Courts"]) for group in result) >= count:
+                break
+
+        # Trim to exactly `count` results
+        flattened = []
+        for group in result:
+            for court in group["Courts"]:
+                flattened.append({
+                    "Latitude": group["Latitude"],
+                    "Longitude": group["Longitude"],
+                    "Court": court
+                })
+        trimmed = flattened[:count]
+
+        # Group again by location
+        grouped = {}
+        for item in trimmed:
+            key = (item["Latitude"], item["Longitude"])
+            if key not in grouped:
+                grouped[key] = {
+                    "Latitude": item["Latitude"],
+                    "Longitude": item["Longitude"],
+                    "Courts": []
+                }
+            grouped[key]["Courts"].append(item["Court"])
+
+        return jsonify(list(grouped.values()))
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

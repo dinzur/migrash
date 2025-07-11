@@ -19,11 +19,25 @@ def load_court_data(path='COURTS.xlsx', sheet='Tel Aviv'):
     # Drop rows missing coordinates
     df = df.dropna(subset=["Latitude", "Longitude"])
 
-    # Force Lighting to bool (some values may be 'כן' or empty)
+    # Force Lighting to bool
     df["Lighting"] = df["Lighting"].astype(str).str.strip().eq("כן")
+
+    # Add sports_supported array
+    def map_sports(court_type):
+        if "משולב" in court_type:
+            return ["football", "basketball"]
+        elif "כדורגל" in court_type:
+            return ["football"]
+        elif "כדורסל" in court_type:
+            return ["basketball"]
+        elif "כדורעף" in court_type:
+            return ["volleyball"]
+        return []
+
+    df["sports_supported"] = df["CourtType"].astype(str).apply(map_sports)
 
     return df[[
         "City", "CourtType", "SurfaceType", "Street", "StreetNumber",
         "Latitude", "Longitude", "Lighting", "Availability",
-        "Affiliation", "Description"
+        "Affiliation", "Description", "sports_supported"
     ]].reset_index(drop=True)
